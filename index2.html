@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Matrix PlayGround</title>
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+    <script src="matrix.js"></script>
+    <script src="matrixui.js"></script>
+</head>
+<body>
+<canvas id='root'></canvas>
+<script>
+    const canvas = document.getElementById('root');
+    const w = canvas.width = window.innerWidth;
+    const h = canvas.height = window.innerHeight;
+    const context = canvas.getContext('2d');
+
+    function clear() {
+        context.fillStyle = BACKGROUND_COLOR;
+        context.fillRect(0, 0, w, h)
+    }
+
+    clear();
+
+    const matrixui = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    matrixui.setView(context, 30, 30, 200);
+    matrixui.draw();
+
+    const transposed = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    transposed.setView(context, 260, 30, 200);
+    transposed.draw();
+
+    matrixui.addListener(function () {
+        transposed.set(matrixui.matrix.transpose())
+    });
+
+    transposed.addListener(function () {
+        matrixui.set(transposed.matrix.transpose())
+    });
+
+
+    matrixui.connectCanvas(canvas);
+    transposed.connectCanvas(canvas);
+
+    // INVERSE
+
+    const orig = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    orig.setView(context, 490, 30, 200);
+    orig.draw();
+
+    const inv = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    inv.setView(context, 720, 30, 200);
+    inv.draw();
+
+    orig.addListener(function () {
+        inv.set(orig.matrix.inverse())
+    });
+
+    inv.addListener(function () {
+        orig.set(inv.matrix.inverse())
+    });
+
+    orig.connectCanvas(canvas);
+    inv.connectCanvas(canvas);
+
+    // DOT
+
+    const a = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    a.setView(context, 30, 260, 200);
+    a.draw();
+
+    const b = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    b.setView(context, 260, 260, 200);
+    b.draw();
+
+    const c = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    c.setView(context, 490, 260, 200);
+    c.draw();
+
+    a.connectCanvas(canvas);
+    b.connectCanvas(canvas);
+    c.set(a.matrix.dot(b.matrix));
+
+    const listener = function () {
+        c.set(a.matrix.dot(b.matrix))
+    };
+
+    a.addListener(listener);
+    b.addListener(listener);
+
+    // SVD
+
+    const svd = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    svd.setView(context, 30, 490, 200);
+    svd.draw();
+
+    const u = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    u.setView(context, 260, 490, 200);
+    u.setUpdateMatrixFn(rotateUpdateMatrix);
+    u.draw();
+
+    const sigma = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    sigma.setView(context, 490, 490, 200);
+    sigma.setUpdateMatrixFn(scaleUpdateMatrix);
+    sigma.draw();
+
+    const v = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    v.setView(context, 720, 490, 200);
+    v.setUpdateMatrixFn(rotateUpdateMatrix);
+    v.draw();
+
+    svd.connectCanvas(canvas);
+    u.connectCanvas(canvas);
+    v.connectCanvas(canvas);
+    sigma.connectCanvas(canvas);
+
+    svd.addListener(function () {
+        let svd_matrix = svd.matrix.svd();
+        u.set(svd_matrix[0]);
+        sigma.set(svd_matrix[1]);
+        v.set(svd_matrix[2].transpose())
+    });
+
+    let svdListener = function () {
+        u.lock = sigma.lock = v.lock = true;
+        try {
+            svd.set(u.matrix.dot(sigma.matrix).dot(v.matrix))
+        } finally {
+            u.lock = sigma.lock = v.lock = false
+        }
+    };
+
+    u.addListener(svdListener);
+    sigma.addListener(svdListener);
+    v.addListener(svdListener);
+
+    // EIGEN DECOMPOSITION
+
+    const edMatrix = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    edMatrix.setView(context, 30, 720, 200);
+    edMatrix.draw();
+
+    const eVectors = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    eVectors.setView(context, 260, 720, 200);
+    eVectors.draw();
+
+    const eValues = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    eValues.setView(context, 490, 720, 200);
+    eValues.setUpdateMatrixFn(scaleUpdateMatrix);
+    eValues.draw();
+
+    const eVectorsInv = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+    eVectorsInv.setView(context, 720, 720, 200);
+    eVectorsInv.draw();
+
+    edMatrix.addListener(function () {
+        let ed = edMatrix.matrix.ed();
+        eVectors.set(ed[0]);
+        eValues.set(ed[1])
+    });
+
+    eVectors.addListener(function () {
+        eValues.lock = true;
+        try {
+            eVectorsInv.set(eVectors.matrix.inverse());
+            edMatrix.set(eVectors.matrix.dot(eValues.matrix).dot(eVectorsInv.matrix))
+        } finally {
+            eValues.lock = false
+        }
+    });
+
+    eValues.addListener(function () {
+        eVectors.lock = true;
+        try {
+            edMatrix.set(eVectors.matrix.dot(eValues.matrix).dot(eVectorsInv.matrix))
+        } finally {
+            eVectors.lock = false
+        }
+    });
+
+    eVectorsInv.addListener(function () {
+        eVectors.set(eVectorsInv.matrix.inverse())
+    });
+
+    edMatrix.connectCanvas(canvas);
+    eVectors.connectCanvas(canvas);
+    eValues.connectCanvas(canvas);
+    eVectorsInv.connectCanvas(canvas)
+</script>
+</body>
+</html>

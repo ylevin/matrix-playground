@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Matrix PlayGround</title>
+    <style type="text/css">
+        body {
+            background-color: black;
+            color: white;
+        }
+    </style>
+    <script src="matrix.js"></script>
+    <script src="matrixui.js"></script>
+</head>
+<body>
+<h2>Transpose Matrices</h2>
+<canvas id="matrix1"></canvas>
+<canvas id="transposed"></canvas>
+
+<h2>Inverse Matrix</h2>
+<canvas id="matrix2"></canvas>
+<canvas id="inversed"></canvas>
+
+<h2>Dot Operation</h2>
+<canvas id="a"></canvas>
+<canvas id="b"></canvas>
+<canvas id="c"></canvas>
+
+<h2>SVD Decomposition</h2>
+<canvas id="svd"></canvas>
+<canvas id="u"></canvas>
+<canvas id="sigma"></canvas>
+<canvas id="v"></canvas>
+
+<h2>EigenDecomposition</h2>
+<canvas id="ed"></canvas>
+<canvas id="e-vecs"></canvas>
+<canvas id="e-vals"></canvas>
+<canvas id="e-vecs-inv"></canvas>
+<script>
+    function createMatrix(id) {
+        let result = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
+        result.applyCanvas(document.getElementById(id), 200);
+        result.draw();
+        return result;
+    }
+
+    const matrix1 = createMatrix('matrix1');
+    const transposed = createMatrix('transposed');
+
+    matrix1.addListener(function () {
+        transposed.set(matrix1.matrix.transpose())
+    });
+
+    transposed.addListener(function () {
+        matrix1.set(transposed.matrix.transpose())
+    });
+
+    // INVERSE
+
+    const matrix2 = createMatrix('matrix2');
+
+    const inversed = createMatrix('inversed');
+
+    matrix2.addListener(function () {
+        inversed.set(matrix2.matrix.inverse())
+    });
+
+    inversed.addListener(function () {
+        matrix2.set(inversed.matrix.inverse())
+    });
+
+    // DOT
+
+    const a = createMatrix('a');
+    const b = createMatrix('b');
+    const c = createMatrix('c');
+
+    c.set(a.matrix.dot(b.matrix));
+
+    const listener = function () {
+        c.set(a.matrix.dot(b.matrix))
+    };
+
+    a.addListener(listener);
+    b.addListener(listener);
+
+    // SVD
+
+    const svd = createMatrix('svd');
+    const u = createMatrix('u');
+    u.setUpdateMatrixFn(rotateUpdateMatrix);
+    const sigma = createMatrix('sigma');
+    sigma.setUpdateMatrixFn(scaleUpdateMatrix);
+    const v = createMatrix('v');
+    v.setUpdateMatrixFn(rotateUpdateMatrix);
+
+    svd.addListener(function () {
+        let svd_matrix = svd.matrix.svd();
+        u.set(svd_matrix[0]);
+        sigma.set(svd_matrix[1]);
+        v.set(svd_matrix[2].transpose())
+    });
+
+    let svdListener = function () {
+        u.lock = sigma.lock = v.lock = true;
+        try {
+            svd.set(u.matrix.dot(sigma.matrix).dot(v.matrix))
+        } finally {
+            u.lock = sigma.lock = v.lock = false
+        }
+    };
+
+    u.addListener(svdListener);
+    sigma.addListener(svdListener);
+    v.addListener(svdListener);
+
+    // EIGEN DECOMPOSITION
+
+    const edMatrix = createMatrix('ed');
+
+    const eVectors = createMatrix('e-vecs');
+
+    const eValues = createMatrix('e-vals');
+    eValues.setUpdateMatrixFn(scaleUpdateMatrix);
+
+    const eVectorsInv = createMatrix('e-vecs-inv');
+
+    edMatrix.addListener(function () {
+        let ed = edMatrix.matrix.ed();
+        eVectors.set(ed[0]);
+        eValues.set(ed[1])
+    });
+
+    eVectors.addListener(function () {
+        eValues.lock = true;
+        try {
+            eVectorsInv.set(eVectors.matrix.inverse());
+            edMatrix.set(eVectors.matrix.dot(eValues.matrix).dot(eVectorsInv.matrix))
+        } finally {
+            eValues.lock = false
+        }
+    });
+
+    eValues.addListener(function () {
+        eVectors.lock = true;
+        try {
+            edMatrix.set(eVectors.matrix.dot(eValues.matrix).dot(eVectorsInv.matrix))
+        } finally {
+            eVectors.lock = false
+        }
+    });
+
+    eVectorsInv.addListener(function () {
+        eVectors.set(eVectorsInv.matrix.inverse())
+    });
+</script>
+</body>
+</html>

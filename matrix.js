@@ -4,9 +4,10 @@ class Matrix {
     }
 
     translate(point) {
-        let values = this.values;
-        return [this.translateX(point[0], point[1]),
-            this.translateY(point[0], point[1])]
+        return [
+            this.translateX(point[0], point[1]),
+            this.translateY(point[0], point[1])
+        ]
     }
 
     translateX(x, y) {
@@ -114,7 +115,7 @@ class Matrix {
             ratio2 = b / (l2 - a);
         } else {
             ratio1 = (l1 - d) / c;
-            ratio2 = (l1 - d) / c;
+            ratio2 = (l2 - d) / c;
         }
 
         let x1ev = 1 / Math.sqrt(1 + 1 / ratio1 / ratio1);

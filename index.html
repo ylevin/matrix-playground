@@ -75,7 +75,7 @@
     const a = createMatrix('a');
     const b = createMatrix('b');
     const c = createMatrix('c');
-
+    c.setUpdateMatrixFn(function() {});
     c.set(a.matrix.dot(b.matrix));
 
     const listener = function () {

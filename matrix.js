@@ -101,30 +101,29 @@ class Matrix {
         let d = this.values[1][1];
         let t = a + d;
         let det = this.det();
-        let term = Math.sqrt(t * t / 4 - det);
+        let sDet = t * t / 4 - det;
+        let term = Math.sqrt(sDet);
         let l1 = t / 2 + term;
         let l2 = t / 2 - term;
-        let eVec = null;
-        if (c !== 0.0) {
-            eVec = new Matrix([[l1 - d, l2 - d], [c, c]])
-        } else if (b !== 0.0) {
-            eVec = new Matrix([[b, b], [l1 - a, l2 - a]])
+
+        let ratio1 = 1;
+        let ratio2 = 1;
+
+        if (Math.abs(b) > Math.abs(c)) {
+            ratio1 = b / (l1 - a);
+            ratio2 = b / (l2 - a);
         } else {
-            eVec = new Matrix([[1, 0], [0, 1]])
+            ratio1 = (l1 - d) / c;
+            ratio2 = (l1 - d) / c;
         }
+
+        let x1ev = 1 / Math.sqrt(1 + 1 / ratio1 / ratio1);
+        let y1ev = x1ev / ratio1;
+        let x2ev = 1 / Math.sqrt(1 + 1 / ratio2 / ratio2);
+        let y2ev = x2ev / ratio2;
+
         let eVal = new Matrix([[l1, 0], [0, l2]]);
-
-        let ea = eVec.values[0][0];
-        let eb = eVec.values[0][1];
-        let len1 = Math.hypot(ea, eb);
-        eVec.values[0][0] = ea / len1;
-        eVec.values[0][1] = eb / len1;
-
-        let ec = eVec.values[1][0];
-        let ed = eVec.values[1][1];
-        let len2 = Math.hypot(ec, ed);
-        eVec.values[1][0] = ec / len2;
-        eVec.values[1][1] = ed / len2;
+        let eVec = new Matrix([[x1ev, x2ev], [y1ev, y2ev]]);
 
         return [eVec, eVal]
     }

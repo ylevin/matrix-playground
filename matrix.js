@@ -110,23 +110,23 @@ class Matrix {
         let ratio1 = 1;
         let ratio2 = 1;
 
-        if (Math.abs(b) > Math.abs(c)) {
+        let eVal = new Matrix([[l1, 0], [0, l2]]);
+
+        if (Math.abs(b) > 0) {
             ratio1 = b / (l1 - a);
             ratio2 = b / (l2 - a);
-        } else {
+        } else if (Math.abs(c) > 0) {
             ratio1 = (l1 - d) / c;
             ratio2 = (l2 - d) / c;
+        } else {
+            return [new Matrix([[1, 0], [0, 1]]), eVal]
         }
 
         let x1ev = 1 / Math.sqrt(1 + 1 / ratio1 / ratio1);
         let y1ev = x1ev / ratio1;
         let x2ev = 1 / Math.sqrt(1 + 1 / ratio2 / ratio2);
         let y2ev = x2ev / ratio2;
-
-        let eVal = new Matrix([[l1, 0], [0, l2]]);
-        let eVec = new Matrix([[x1ev, x2ev], [y1ev, y2ev]]);
-
-        return [eVec, eVal]
+        return [new Matrix([[x1ev, x2ev], [y1ev, y2ev]]), eVal]
     }
 
     inverse() {

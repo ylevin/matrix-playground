@@ -12,6 +12,13 @@ const ARROW_ANGLE = 30 * Math.PI / 180;
 const ARROW_ANGLE_SIN = Math.sin(ARROW_ANGLE);
 const ARROW_ANGLE_COS = Math.cos(ARROW_ANGLE);
 
+function projection(ax, ay, bx, by) {
+    let bLen = Math.hypot(bx, by);
+    let nbx = bx / bLen;
+    let nby = by / bLen;
+    return ax * nbx + ay * nby;
+}
+
 function freeUpdateMatrix(matrix, id, lx, ly, dx, dy) {
     let values = matrix.values;
     values[0][id] += dx;
@@ -26,15 +33,51 @@ function rotateUpdateMatrix(matrix, id, lx, ly, dx, dy) {
 }
 
 function scaleUpdateMatrix(matrix, id, lx, ly, dx, dy) {
-    let scale = Math.hypot(dx + lx, dy + ly) / Math.hypot(lx, ly);
-    matrix.values[0][id] = matrix.values[0][id] * scale;
-    matrix.values[1][id] = matrix.values[1][id] * scale
+    let bx = matrix.values[0][id];
+    let by = matrix.values[1][id];
+
+    let p1 = projection(lx, ly, bx, by);
+    let p2 = projection(lx + dx, ly + dy, bx, by);
+
+    if (Math.abs(p2) < 0.001) {
+        return;
+    }
+
+    if (Math.abs(p1) < 0.001) {
+        let bLen = Math.hypot(bx, by);
+        matrix.values[0][id] = matrix.values[0][id] * Math.abs(p2 / bLen);
+        matrix.values[1][id] = matrix.values[1][id] * Math.abs(p2 / bLen);
+    } else {
+        matrix.values[0][id] = matrix.values[0][id] * Math.abs(p2 / p1);
+        matrix.values[1][id] = matrix.values[1][id] * Math.abs(p2 / p1);
+    }
+}
+
+function scaleNegativeAllowUpdateMatrix(matrix, id, lx, ly, dx, dy) {
+    let bx = matrix.values[0][id];
+    let by = matrix.values[1][id];
+
+    let p1 = projection(lx, ly, bx, by);
+    let p2 = projection(lx + dx, ly + dy, bx, by);
+
+    if (Math.abs(p2) < 0.001) {
+        return;
+    }
+
+    if (Math.abs(p1) < 0.001) {
+        let bLen = Math.hypot(bx, by);
+        matrix.values[0][id] = matrix.values[0][id] * p2 / bLen;
+        matrix.values[1][id] = matrix.values[1][id] * p2 / bLen;
+    } else {
+        matrix.values[0][id] = matrix.values[0][id] * p2 / p1;
+        matrix.values[1][id] = matrix.values[1][id] * p2 / p1;
+    }
 }
 
 class MatrixUI {
-    constructor(matrix, max) {
+    constructor(matrix, gridSize) {
         this.matrix = matrix;
-        this.max = max;
+        this.gridSize = gridSize;
         this.listeners = [];
         this.listenerId = 0;
         this.lock = false;
@@ -152,7 +195,7 @@ class MatrixUI {
     press(x, y) {
         let localX = x - (this.pos[0] + this.size / 2);
         let localY = (this.pos[1] + this.size / 2) - y;
-        let cellSize = this.size / this.max;
+        let cellSize = this.size / this.gridSize;
 
         let dist0 = Math.hypot(localX - this.matrix.values[0][0] * cellSize,
             localY - this.matrix.values[1][0] * cellSize);
@@ -180,7 +223,7 @@ class MatrixUI {
         let localY = (this.pos[1] + this.size / 2) - y;
 
         if (this.selected) {
-            let cellSize = this.size / this.max;
+            let cellSize = this.size / this.gridSize;
             let lx = this.lastX / cellSize;
             let ly = this.lastY / cellSize;
             let dx = (localX - this.lastX) / cellSize;
@@ -194,7 +237,7 @@ class MatrixUI {
 
     drawGrid(context, matrix) {
         let size = this.size;
-        let cellSize = this.size / this.max;
+        let cellSize = this.size / this.gridSize;
         let halfSize = this.size / 2;
         let cx = this.pos[0] + halfSize;
         let cy = this.pos[1] + halfSize;
@@ -211,7 +254,7 @@ class MatrixUI {
         context.lineTo(cx + matrix.translateX(size, 0),
             cy - matrix.translateY(size, 0));
 
-        for (let i = 0; i <= this.max; i++) {
+        for (let i = 0; i <= this.gridSize; i++) {
             let level = i * cellSize;
             context.moveTo(cx + matrix.translateX(level, -size),
                 cy - matrix.translateY(level, -size));
@@ -239,7 +282,7 @@ class MatrixUI {
 
     drawCircle(context, matrix) {
         let count = this.size;
-        let cellSize = this.size / this.max;
+        let cellSize = this.size / this.gridSize;
         let centerX = this.pos[0] + this.size / 2;
         let centerY = this.pos[1] + this.size / 2;
         let radStep = Math.PI * 2 / count;
@@ -257,7 +300,7 @@ class MatrixUI {
     }
 
     drawVector(context, vecX, vecY) {
-        let cellSize = this.size / this.max;
+        let cellSize = this.size / this.gridSize;
         let centerX = this.pos[0] + this.size / 2;
         let centerY = this.pos[1] + this.size / 2;
 

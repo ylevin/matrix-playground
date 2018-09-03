@@ -36,11 +36,13 @@
 <canvas id="ed"></canvas>
 <canvas id="e-vecs"></canvas>
 <canvas id="e-vals"></canvas>
-<canvas id="e-vecs-inv"></canvas>
 <script>
+    const CANVAS_SIZE = 200;
+    const GRID_SIZE = 5;
+
     function createMatrix(id) {
-        let result = new MatrixUI(new Matrix([[1, 0], [0, 1]]), 5);
-        result.applyCanvas(document.getElementById(id), 200);
+        let result = new MatrixUI(new Matrix([[1, 0], [0, 1]]), GRID_SIZE);
+        result.applyCanvas(document.getElementById(id), CANVAS_SIZE);
         result.draw();
         return result;
     }
@@ -122,9 +124,7 @@
     const eVectors = createMatrix('e-vecs');
 
     const eValues = createMatrix('e-vals');
-    eValues.setUpdateMatrixFn(scaleUpdateMatrix);
-
-    const eVectorsInv = createMatrix('e-vecs-inv');
+    eValues.setUpdateMatrixFn(scaleNegativeAllowUpdateMatrix);
 
     edMatrix.addListener(function () {
         let ed = edMatrix.matrix.ed();
@@ -132,28 +132,21 @@
         eValues.set(ed[1])
     });
 
-    eVectors.addListener(function () {
-        eValues.lock = true;
+    const edListener = function () {
+        eVectors.lock = eValues.lock = true;
         try {
-            eVectorsInv.set(eVectors.matrix.inverse());
-            edMatrix.set(eVectors.matrix.dot(eValues.matrix).dot(eVectorsInv.matrix))
+            edMatrix.set(eVectors.matrix.dot(eValues.matrix).dot(eVectors.matrix.inverse()))
         } finally {
-            eValues.lock = false
+            eVectors.lock = eValues.lock = false;
         }
-    });
+    };
 
-    eValues.addListener(function () {
-        eVectors.lock = true;
-        try {
-            edMatrix.set(eVectors.matrix.dot(eValues.matrix).dot(eVectorsInv.matrix))
-        } finally {
-            eVectors.lock = false
-        }
-    });
+    eVectors.addListener(edListener);
+    eValues.addListener(edListener);
 
-    eVectorsInv.addListener(function () {
-        eVectors.set(eVectorsInv.matrix.inverse())
-    });
+    let ed = edMatrix.matrix.ed();
+    eVectors.set(ed[0]);
+    eValues.set(ed[1])
 </script>
 </body>
 </html>
